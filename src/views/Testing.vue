@@ -32,24 +32,25 @@ export default {
       // aws4 will sign an options object as you'd pass to http.request, with an AWS service and region
       let message = "Hello World"
       var request = {
-        //host: "dxq6ynxhw4.execute-api.us-east-2.amazonaws.com",
+        host: "dxq6ynxhw4.execute-api.us-east-2.amazonaws.com",
         region: 'us-east-2',
         service: "execute-api",
         method: "POST",
         body: JSON.stringify(message),
         url:
-          "https://dxq6ynxhw4.execute-api.us-east-2.amazonaws.com/production/@connections/ZaCxJdUliYcCGEA=",
-        path: "/@connections/ZaCxJdUliYcCGEA=",
+          "https://dxq6ynxhw4.execute-api.us-east-2.amazonaws.com/production/@connections/" + this.item,
+        path: "/@connections/"+ this.item,
       };
+      console.log('REQUEST', request)
       const signedRequest = aws4.sign(request, { 
           secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY,
           accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
        });
-       console.log(signedRequest)
+      console.log('SIGNED REQUEST', signedRequest)
       delete signedRequest.headers['Host'] // remove host header
       delete signedRequest.headers['Content-Length'] // remove content length
       let response = await axios(signedRequest);
-      console.log('Response', response)
+      console.log('AXIOS RESPONSE', response)
     }
   }
 };
