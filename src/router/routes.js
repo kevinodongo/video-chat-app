@@ -1,9 +1,9 @@
-import Meeting from "../views/Meeting.vue";
+import Testing from "../views/Testing.vue";
 const routes = [
   {
     path: "/",
     name: "Meeting",
-    component: Meeting
+    component: Testing
   },
   {
     path: "/chat",
@@ -14,6 +14,16 @@ const routes = [
     path: "/video",
     name: "Video",
     component: () => import("../views/Video.vue")
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: () => import("../components/Login.vue")
+  },
+  {
+    path: "/signup",
+    name: "Signup",
+    component: () => import("../components/Signup.vue")
   }
 ];
 

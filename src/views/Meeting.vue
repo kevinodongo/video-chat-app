@@ -15,7 +15,7 @@
             </div>
             <v-row align="center" class="mt-5">
               <v-btn
-                @click="createmeeting"
+                @click="interractwithapi"
                 color="purple"
                 dark
                 height="55"
@@ -57,17 +57,75 @@
 </template>
 
 <script>
+import { Auth } from "aws-amplify";
+import axios from "axios";
+var aws4 = require("aws4");
 export default {
   data() {
     return {
-      link: ""
+      link: "",
+      logged: {}
     };
+  },
+  async mounted() {
+    this.logged = await Auth.currentAuthenticatedUser();
   },
   methods: {
     // create meeting
     createmeeting() {
       this.$router.push("/video");
+    },
+    // get session token
+    async interractwithapi() {
+      console.log("clicked.....");
+      let request = {
+        host: "ykbxv34xg0.execute-api.us-east-2.amazonaws.com",
+        method: "POST",
+        "Access-Control-Allow-Origin": "*",
+        url:
+          "https://ykbxv34xg0.execute-api.us-east-2.amazonaws.com/production/@connections/ZYjaNeJQCYcCFVQ=",
+        path: "/production/@connections/ZYjaNeJQCYcCFVQ="
+      };
+      let signedRequest = aws4.sign(request, {
+        secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
+        sessionToken: this.logged.signInUserSession.accessToken.jwtToken
+      });
+      console.log(signedRequest);
+
+      delete signedRequest.headers["Host"];
+      delete signedRequest.headers["Content-Length"];
+
+      let response = await axios(signedRequest);
+      console.log("RESPONSE", response);
+    },
+    // sample create @ connection
+    samplewebsocket() {
+      const WebSocket = require("isomorphic-ws");
+      const ws = new WebSocket(
+        "wss://ykbxv34xg0.execute-api.us-east-2.amazonaws.com/production"
+      );
+      ws.onopen = function open() {
+        let message = JSON.stringify({
+          action: "onMessage",
+          data: "This is message from Kevin Odongo"
+        });
+        ws.send(message);
+      };
+
+      ws.onclose = function close() {
+        console.log("disconnected");
+      };
+
+      ws.onmessage = function incoming(data) {
+        console.log("INCOMING MESSAGE", data);
+      };
+    },
+    // sample @ connection request
+    sampleconnection() {
+      //
     }
+    // end
   }
 };
 </script>
