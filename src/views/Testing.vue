@@ -40,6 +40,11 @@ export default {
         url:
           "https://dxq6ynxhw4.execute-api.us-east-2.amazonaws.com/production/@connections/" + this.item,
         path: "/@connections/"+ this.item,
+        headers: {
+            "Access-Control-Allow-Headers" : "Content-Type",
+            "Access-Control-Allow-Origin": "http://localhost:8080/",
+            "Access-Control-Allow-Methods": "DELETE,POST,GET"
+        },
       };
       console.log('REQUEST', request)
       const signedRequest = aws4.sign(request, { 

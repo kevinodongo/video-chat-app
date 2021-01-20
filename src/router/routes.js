@@ -1,9 +1,9 @@
-import Testing from "../views/Testing.vue";
+import Meeting from "../views/Meeting.vue";
 const routes = [
   {
     path: "/",
     name: "Meeting",
-    component: Testing
+    component: Meeting
   },
   {
     path: "/chat",
