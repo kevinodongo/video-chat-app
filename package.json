@@ -18,7 +18,7 @@
     "core-js": "^3.6.5",
     "isomorphic-ws": "^4.0.1",
     "moment": "^2.29.1",
-    "short-uuid": "^4.1.0",
+    "randomatic": "^3.1.1",
     "vue": "^2.6.11",
     "vue-router": "^3.2.0",
     "vuetify": "^2.2.11",

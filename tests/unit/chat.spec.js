@@ -1,10 +1,16 @@
-import Vue from "vue";
 import { shallowMount, createLocalVue } from "@vue/test-utils";
-import VueRouter from "vue-router";
 import Chat from "@/views/Chat.vue";
+import Vuetify from "vuetify";
+import Vue from "vue";
+import VueRouter from "vue-router";
 // eslint-disable-next-line no-unused-vars
-import chat from "../../src/store/chat.module";
+import meeting from "../../src/store/meeting.module";
+import ChatNavigation from "@/components/meetings/ChatNavigation";
+import ChatContent from "@/components/meetings/ChatContent";
+import ChatForm from "@/components/meetings/ChatForm";
 import Vuex from "vuex";
+// initilaize vuetify
+Vue.use(Vuetify);
 // initilaize routes
 if (!process || process.env.NODE_ENV !== "test") {
   Vue.use(VueRouter);
@@ -16,8 +22,10 @@ let actions;
 let store;
 let localVue;
 let router;
+let vuetify;
 
 beforeEach(() => {
+  vuetify = new Vuetify();
   localVue = createLocalVue();
   router = new VueRouter();
   Vue.use(Vuex);
@@ -28,22 +36,20 @@ beforeEach(() => {
 
   state = {};
 
-  actions = {
-    //
-  };
+  actions = {};
 
   store = new Vuex.Store({
     modules: {
-      chat: {
+      meeting: {
         state,
         actions,
         namespaced: true
       }
     }
   });
-
   wrapper = shallowMount(Chat, {
     localVue,
+    vuetify,
     stubs: ["router-link", "router-view"],
     store,
     mocks: {
@@ -57,17 +63,13 @@ afterEach(() => {
 });
 
 describe("Chat.vue", () => {
-  // find the preview button
-  it("on mount find the preview button", async () => {
-    const button = wrapper.find(".preview-button");
-    expect(button.exists()).toBe(true);
-  });
-
-  // find the preview button and handle submit
-  it("on button preview functions called", async () => {
-    await wrapper.find(".preview-button").trigger("click");
-    expect(actions.saveselected).toHaveBeenCalled();
-    expect(router.push).toHaveBeenCalledWith("/dashboard/view");
-
+  //check if chat form, chat content, chat navigation
+  it("check if form, content and navigation components are available", () => {
+    const form = wrapper.findComponent(ChatForm);
+    const content = wrapper.findComponent(ChatContent);
+    const navigation = wrapper.findComponent(ChatNavigation);
+    expect(form.exists()).toBe(true);
+    expect(content.exists()).toBe(true);
+    expect(navigation.exists()).toBe(true);
   });
 });

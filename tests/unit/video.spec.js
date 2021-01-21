@@ -1,10 +1,13 @@
-import Vue from "vue";
 import { shallowMount, createLocalVue } from "@vue/test-utils";
-import VueRouter from "vue-router";
 import Video from "@/views/Video.vue";
+import Vuetify from "vuetify";
+import Vue from "vue";
+import VueRouter from "vue-router";
 // eslint-disable-next-line no-unused-vars
-import chat from "../../src/store/chat.module";
+import meeting from "../../src/store/meeting.module";
 import Vuex from "vuex";
+// initilaize vuetify
+Vue.use(Vuetify);
 // initilaize routes
 if (!process || process.env.NODE_ENV !== "test") {
   Vue.use(VueRouter);
@@ -28,20 +31,18 @@ beforeEach(() => {
 
   state = {};
 
-  actions = {
-    //
-  };
+
+  actions = {};
 
   store = new Vuex.Store({
     modules: {
-      chat: {
+      meeting: {
         state,
         actions,
         namespaced: true
       }
     }
   });
-
   wrapper = shallowMount(Video, {
     localVue,
     stubs: ["router-link", "router-view"],
@@ -57,17 +58,9 @@ afterEach(() => {
 });
 
 describe("Video.vue", () => {
-  // find the preview button
-  it("on mount find the preview button", async () => {
-    const button = wrapper.find(".preview-button");
-    expect(button.exists()).toBe(true);
-  });
-
-  // find the preview button and handle submit
-  it("on button preview functions called", async () => {
-    await wrapper.find(".preview-button").trigger("click");
-    expect(actions.saveselected).toHaveBeenCalled();
-    expect(router.push).toHaveBeenCalledWith("/dashboard/view");
-
+  // find the video button
+  it("on mount find the join button", async () => {
+    const button = wrapper.find(".join_button");
+    expect(button.exists()).toBe(false);
   });
 });

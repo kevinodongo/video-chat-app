@@ -13,14 +13,20 @@
             <div class="option_section_text text-center">
               Lorem ipsum dolor, sit amet consectetur adipisicing elit.
             </div>
-
+            <div class="text-center mt-3" v-if="loading">
+              <v-progress-circular
+                indeterminate
+                color="teal"
+                width="2"
+              ></v-progress-circular>
+            </div>
             <!--Link-->
             <v-row justify="center">
-              <v-col cols="12" md="6">
+              <v-col cols="12">
                 <v-sheet class="mt-5" color="#E0F2F1">
                   <v-card-text class="text-center">
                     <div class="link_text">
-                      123456789
+                      {{ meeting_id }}
                     </div>
                   </v-card-text>
                 </v-sheet>
@@ -35,10 +41,10 @@
                   dark
                   block
                   large
-                  to="/chat"
+                  @click="gotochat"
                   outlined
                   elevation="3"
-                  class="option_section_button"
+                  class="option_section_button message_button"
                 >
                   <v-icon class="mr-2">mdi-message-text</v-icon>
                   <span class="option_button_text">Message</span>
@@ -49,11 +55,11 @@
                   color="teal darken-1"
                   dark
                   block
-                  to="/video"
+                  @click="gotovideo"
                   large
                   outlined
                   elevation="3"
-                  class="option_section_button"
+                  class="option_section_button video_button"
                 >
                   <v-icon class="mr-2">mdi-video</v-icon>
                   <span class="option_button_text">Video</span>
@@ -68,18 +74,61 @@
 </template>
 
 <script>
+import { createnewmeeting, generateurl } from "../components/script";
 export default {
   name: "Option",
   data() {
     return {
       overlay: true,
+      loading: false
     };
   },
+  // computed
+  computed: {
+    meeting_id() {
+      return this.$store.state.meeting_url;
+    }
+  },
+  // mounted
   mounted() {
     setTimeout(() => {
       this.overlay = false;
     }, 1000);
   },
+  // methods
+  methods: {
+    // go to chat
+    async gotochat() {
+      this.loading = true;
+      let response = await generateurl("chat");
+      let event = JSON.stringify({
+        action: "create",
+        data: `${response}` // meeting id
+      });
+      await createnewmeeting(event);
+      // set timeout
+      setTimeout(() => {
+        this.loading = false;
+        this.$router.push("/chat")
+      }, 1000);
+    },
+    // go to video
+    async gotovideo() {
+      this.loading = true;
+      const response = await generateurl("video");
+      let event = JSON.stringify({
+        action: "create",
+        data: `${response}` // meeting id
+      });
+      await createnewmeeting(event);
+      // set timeout
+      setTimeout(() => {
+        this.loading = false;
+        this.$router.push("/video")
+      }, 1000);
+    }
+    // end
+  }
 };
 </script>
 

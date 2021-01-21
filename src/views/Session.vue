@@ -3,7 +3,7 @@
     <v-navigation-drawer v-model="drawer" app>
       <v-toolbar flat>
         <v-spacer></v-spacer>
-        <v-icon color="black" @click="showgrid">mdi-view-grid</v-icon>
+        <v-icon class="grid_button" color="black" @click="showgrid">mdi-view-grid</v-icon>
       </v-toolbar>
       <v-card-text>
         <div v-for="item in items" :key="item.id">

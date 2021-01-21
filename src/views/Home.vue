@@ -1,7 +1,6 @@
-
 <template>
   <div class="home_section">
-    <!--Header-->
+    <!--App bar-->
     <v-app-bar flat color="white" class="home_bar">
       <img
         src="https://res.cloudinary.com/dk5ch7wqm/image/upload/v1610042479/IMG-20200910-WA0020_ppnudi.jpg"
@@ -48,7 +47,6 @@
         to="/signup"
         color="teal darken-1"
         class="ml-1 pl-5 pr-5 d-none d-sm-flex"
-        :large="$vuetify.breakpoint.mdAndUp"
         dark
       >
         <span style="text-transform: capitalize;" class="mr-1">Sign</span>
@@ -85,8 +83,6 @@
         <span class="white--text">M</span>
       </v-avatar>
     </v-app-bar>
-    <!--/end-->
-
     <!--Content-->
     <v-row justify="center" align="center" class="fill-height">
       <v-col cols="11" sm="10" md="11">
@@ -159,11 +155,13 @@
         </v-row>
       </v-col>
     </v-row>
+    <!--/end-->
   </div>
 </template>
 
 <script>
 // import { Auth } from "aws-amplify"
+import { joinnewmeeting } from "../components/script";
 export default {
   name: "Home",
   data() {
@@ -180,12 +178,22 @@ export default {
   },
   methods: {
     // create meeting
-    createmeeting() {
+    async createmeeting() {
       this.$router.push("/option-select");
     },
     // join meeting
-    joinmeeting() {
-      this.$router.push("/video");
+    async joinmeeting() {
+      const response = this.item.split(",");
+      let event = JSON.stringify({
+        action: "join",
+        data: { group_name: `${response[1]}`, group_id: `${response[0]}` }
+      });
+      await joinnewmeeting(event);
+      if (response[1] === "chat") {
+        this.$router.push("/chat");
+      } else {
+        this.$router.push("/video");
+      }
     }
   }
 };
@@ -200,6 +208,15 @@ export default {
 }
 .home_section {
   height: 100vh;
+}
+
+@media only screen and (max-width: 960px) {
+  .home_bar {
+    margin-bottom: 5rem;
+  }
+  .small_screen_text {
+    text-align: center;
+  }
 }
 
 .home_title {

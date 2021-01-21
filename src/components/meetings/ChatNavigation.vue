@@ -9,9 +9,7 @@
             </v-list-item-content>
 
             <v-list-item-action>
-              <v-list-item-action-text>{{
-                formatDate(item.createdAt)
-              }}</v-list-item-action-text>
+              <v-list-item-action-text>min ago</v-list-item-action-text>
             </v-list-item-action>
           </v-list-item>
           <v-divider v-if="index < items.length - 1" :key="index"></v-divider>
@@ -22,19 +20,28 @@
 </template>
 
 <script>
-import moment from "moment";
 export default {
+  name: "Chatnavigation",
   data() {
     return {
-      value: "",
-      items: []
+      value: ""
+      //items: []
     };
+  },
+  // computed
+  computed: {
+    items() {
+      return this.$store.state.users;
+    }
   },
   // methods
   methods: {
     formatDate(item) {
-      return moment(item).fromNow();
-    },
+      const response = item.split(":");
+      let hour = response[1];
+      let min = response[2];
+      return "at" + " " + `${hour}` + ":" + `${min}`;
+    }
   }
 };
 </script>

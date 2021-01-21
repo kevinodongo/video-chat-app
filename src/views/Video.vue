@@ -34,7 +34,7 @@
                     large
                     @click="joinmeeting"
                     elevation="3"
-                    class="video_section_button"
+                    class="video_section_button join_button"
                   >
                     <span class="video_button_text">Join Meeting</span>
                   </v-btn>
@@ -47,7 +47,7 @@
                     @click="cancelMeeting"
                     color="teal darken-1"
                     outlined
-                    class="video_section_button"
+                    class="video_section_button cancel_button"
                   >
                     <span class="video_button_text">Cancel</span>
                   </v-btn>

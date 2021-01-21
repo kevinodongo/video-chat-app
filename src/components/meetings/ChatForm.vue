@@ -22,6 +22,7 @@
 </template>
 
 <script>
+import { sendnewmessage } from "../script";
 export default {
   data() {
     return {
@@ -31,7 +32,11 @@ export default {
   methods: {
     // create message
     createmessage() {
-      //
+      let event = JSON.stringify({
+        action: "send",
+        data: `${this.item}`
+      });
+      sendnewmessage(event);
     }
   }
 };
