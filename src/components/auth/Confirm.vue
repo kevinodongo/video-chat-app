@@ -1,6 +1,9 @@
 <template>
-  <!--Sign up form-->
-  <div class="signup">
+  <!--Confirm form-->
+  <div class="confirm">
+    <v-snackbar v-model="snackbar" top color="teal" text rounded>
+      Success! Please confirm your email.
+    </v-snackbar>
     <v-row justify="center" align="center" class="fill-height">
       <v-col cols="12">
         <div style="display: flex; justify-content: center;">
@@ -10,8 +13,17 @@
                 class="text-center signupTitle mt-2 mb-5"
                 style="color: black"
               >
-                Sign up — it's free!
+                Confirm — your email!
               </div>
+              <v-alert
+                color="error"
+                border="left"
+                class="mt-3"
+                text
+                v-if="error"
+              >
+                <span class="black--text">{{ error }}</span>
+              </v-alert>
               <v-form ref="form" v-model="valid" lazy-validation>
                 <div class="black--text mb-1" style="font-size: 14px;">
                   Email
@@ -30,23 +42,20 @@
                   Password
                 </div>
                 <v-text-field
-                  name="password"
+                  name="code"
                   single-line
                   outlined
                   data-password
                   required
-                  hint="At least 8 characters"
+                  hint="Check your email for the code"
                   persistent-hint
                   v-model="password"
                   dense
-                  :rules="passwordRules"
-                  :append-icon="show ? 'mdi-eye' : 'mdi-eye-off'"
-                  :type="show ? 'text' : 'password'"
-                  @click:append="show = !show"
+                  :rules="codeRules"
                 ></v-text-field>
                 <v-btn
                   :loading="loading"
-                  color="purple"
+                  color="#00897B"
                   block
                   tile
                   large
@@ -56,30 +65,10 @@
                   <span
                     style="text-transform: capitalize; font-size: 16px;"
                     class="font-weight-regular"
-                    >Sign up</span
+                    >Confirm</span
                   >
                 </v-btn>
               </v-form>
-              <v-card-actions class="mx-auto pa-0 mt-5 mb-5">
-                <v-divider></v-divider>
-                <span class="mr-1 ml-1">OR</span>
-                <v-divider></v-divider>
-              </v-card-actions>
-              <v-btn
-                to="/login"
-                color="grey lighten-3"
-                block
-                class="mb-3 login-button"
-                elevation="0"
-                large
-                @click="submit"
-              >
-                <span
-                  style="text-transform: capitalize; font-size: 16px;"
-                  class="font-weight-regular"
-                  >Log in</span
-                >
-              </v-btn>
             </v-card-text>
           </div>
         </div>
@@ -89,27 +78,32 @@
 </template>
 
 <script>
-import { Auth } from "aws-amplify";
+//import { Auth } from "aws-amplify";
 export default {
-  name: "Signup",
+  name: "Confirm",
   data() {
     return {
+      snackbar: false,
       valid: true,
-      isError: null,
+      error: null,
       loading: false,
       show: false,
-      showalert: false,
       email: "",
-      password: "",
-      passwordRules: [v => !!v || "Password is required"],
+      code: "",
+      codeRules: [v => !!v || "Password is required"],
       emailRules: [
         v => !!v || "E-mail is required",
         v => /.+@.+\..+/.test(v) || "E-mail must be valid"
-      ],
+      ]
     };
   },
+  // mounted
+  mounted() {
+    this.snackbar = true;
+  },
+  // methods
   methods: {
-    //signup
+    //confirm
     async submit() {
       const response = this.$refs.form.validate();
       if (response === false) {
@@ -119,20 +113,26 @@ export default {
       // eslint-disable-next-line no-unused-vars
 
       let username = this.email;
-      let password = this.password;
-      let email = this.email;
+      let code = this.code;
+      console.log(code, username);
 
-      Auth.signUp({
-        username,
-        password,
-        attributes: {
-          email
-        }
-      });
-      this.$refs.form.reset();
+      // Cognito Authentication using Amplify
+      // After retrieveing the confirmation code from the user
+      /**
+       * await Auth.confirmSignUp(username, code)
+        .then(() => {
+          this.$router.push("/");
+        })
+        .catch(Error => {
+          if (Error) {
+            this.error = Error.message;
+          }
+        });
+      */
+
       setTimeout(() => {
         this.loading = false;
-      }, 500);
+      }, 1000);
     }
     // end
   }
@@ -140,7 +140,7 @@ export default {
 </script>
 
 <style lang="css">
-.signup {
+.confirm {
   height: 700px;
 }
 .passwordText {

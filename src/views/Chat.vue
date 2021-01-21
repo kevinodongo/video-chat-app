@@ -1,34 +1,18 @@
 <template>
   <div class="chat">
-    <v-navigation-drawer color="#FAFAFA" v-model="drawer" app width="400">
+    <v-navigation-drawer width="350" v-model="drawer" app>
       <ChatNavigation />
     </v-navigation-drawer>
 
     <div class="content">
-      <v-app-bar flat color="white">
-        <v-badge
-          bordered
-          bottom
-          color="deep-purple accent-4"
-          dot
-          offset-x="10"
-          offset-y="10"
-        >
-          <v-avatar size="40">
-            <v-img src="https://cdn.vuetifyjs.com/images/lists/1.jpg"></v-img>
-          </v-avatar>
-        </v-badge>
-        <div class="ml-5">
-          <div>Ali Connors</div>
-          <div class="caption grey--text">Online</div>
-        </div>
+      <v-toolbar flat color="#ECEFF1">
+        <v-icon @click="drawer = !drawer" color="black">mdi-menu</v-icon>
         <v-spacer></v-spacer>
-        <v-icon class="mr-2">mdi-magnify</v-icon>
-        <v-icon class="mr-2" @click="createvideo">mdi-video</v-icon>
-        <v-icon class="mr-2">mdi-phone-outline</v-icon>
         <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on">mdi-dots-vertical</v-icon>
+            <v-icon color="black" v-bind="attrs" v-on="on"
+              >mdi-dots-vertical</v-icon
+            >
           </template>
           <v-list width="200" dense>
             <v-list-item v-for="(item, index) in items" :key="index">
@@ -41,12 +25,11 @@
             </v-list-item>
           </v-list>
         </v-menu>
-      </v-app-bar>
-      <v-divider></v-divider>
+      </v-toolbar>
       <ChatContent />
     </div>
 
-    <v-footer padless absolute>
+    <v-footer padless absolute color="#ECEFF1">
       <v-col class="text-center" cols="12">
         <ChatForm />
       </v-col>
@@ -55,9 +38,9 @@
 </template>
 
 <script>
-import ChatNavigation from "../components/ChatNavigation";
-import ChatContent from "../components/ChatContent";
-import ChatForm from "../components/ChatForm";
+import ChatNavigation from "../components/meetings/ChatNavigation";
+import ChatContent from "../components/meetings/ChatContent";
+import ChatForm from "../components/meetings/ChatForm";
 export default {
   components: { ChatNavigation, ChatContent, ChatForm },
   data() {
@@ -103,7 +86,7 @@ export default {
     },
     // create video
     createvideo() {
-      //
+      this.$router.push("/video")
     }
   }
 };

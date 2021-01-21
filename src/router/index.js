@@ -10,4 +10,27 @@ const router = new VueRouter({
   routes
 });
 
+/**
+ * 
+ * Router Guard
+router.beforeResolve((to, from, next) => {
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    let user;
+    Vue.prototype.$Amplify.Auth.currentAuthenticatedUser()
+      .then(data => {
+        if (data && data.signInUserSession) {
+          user = data;
+        }
+        next();
+      })
+      .catch(e => {
+        next({
+          path: "/"
+        });
+      });
+  }
+  next();
+});
+*/
+
 export default router;

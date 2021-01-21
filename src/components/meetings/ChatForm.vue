@@ -6,13 +6,15 @@
       id="id"
       v-model="item"
       background-color="white"
+      solo
+      flat
       hide-details=""
-      outlined
-      single-line
     >
       <template v-slot:append>
         <div>
-          <v-icon @click="createmessage" large color="purple">mdi-send</v-icon>
+          <v-btn dark color="teal darken-1" @click="createmessage">
+            <span style="text-transform: capitalize">send</span>
+          </v-btn>
         </div>
       </template>
     </v-text-field>

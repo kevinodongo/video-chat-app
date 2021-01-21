@@ -11,11 +11,13 @@
   "dependencies": {
     "@aws-amplify/ui-vue": "^0.2.33",
     "aws-amplify": "^3.3.14",
+    "aws-amplify-vue": "^2.1.4",
     "aws-sdk": "^2.828.0",
     "aws4": "^1.11.0",
     "axios": "^0.21.1",
     "core-js": "^3.6.5",
     "isomorphic-ws": "^4.0.1",
+    "moment": "^2.29.1",
     "short-uuid": "^4.1.0",
     "vue": "^2.6.11",
     "vue-router": "^3.2.0",

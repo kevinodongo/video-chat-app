@@ -43,6 +43,7 @@
 
 <script>
 export default {
+  name: "ChatContent",
   data() {
     return {
       objects: [
@@ -63,35 +64,16 @@ export default {
           title: "Delete"
         },
       ],
-      logged: "Tim Cook",
-      items: [
-        {
-          name: "Ali Connor",
-          message:
-            "sit, amet consectetur adipisicing elit. Provident labore veniam harum!sit, amet consectetur adipisicing elit. Provident labore veniam harum!",
-          createdAt: "9.12am"
-        },
-        {
-          name: "Tim Cook",
-          message:
-            "sit, amet consectetur adipisicing elit. Provident labore veniam harum!sit, amet consectetur adipisicing elit. Provident labore veniam harum!",
-          createdAt: "9.12am"
-        },
-        {
-          name: "Ali Connor",
-          message:
-            "sit, amet consectetur adipisicing elit. Provident labore veniam harum!sit, amet consectetur adipisicing elit. Provident labore veniam harum!",
-          createdAt: "9.12am"
-        }
-      ],
+      logged: "",
+      items: [],
       sender: {
-        "background-color": "purple",
+        "background-color": "teal",
         color: "white",
         padding: "1rem",
         "border-radius": "10px"
       },
       receiver: {
-        "background-color": "#F5F5F5",
+        "background-color": "#ECEFF1",
         padding: "1rem",
         "border-radius": "10px"
       }

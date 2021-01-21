@@ -7,6 +7,21 @@
         <div style="display: flex; justify-content: center;">
           <div class="sheet-container">
             <v-card-text class="pa-7">
+              <div
+                class="text-center loginTitle mt-2 mb-5"
+                style="color: black"
+              >
+                Log in!
+              </div>
+              <v-alert
+                color="error"
+                border="left"
+                class="mt-3"
+                text
+                v-if="error"
+              >
+                <span class="black--text">{{ error }}</span>
+              </v-alert>
               <v-form ref="form" v-model="valid" lazy-validation>
                 <div class="black--text mb-1" style="font-size: 14px;">
                   Email address
@@ -27,10 +42,10 @@
                   </div>
                   <router-link
                     class="reset-button"
-                    to="/"
+                    to="/login-help"
                     style="text-decoration: none;"
                   >
-                    <span style="font-weight: 700; color: purple"
+                    <span style="font-weight: 700; color: #00897B"
                       >Forgot Password?</span
                     >
                   </router-link>
@@ -51,7 +66,7 @@
                 <v-btn
                   :loading="loading"
                   class="white--text submit-button"
-                  color="purple"
+                  color="teal darken-1"
                   block
                   :disabled="!valid"
                   large
@@ -94,7 +109,7 @@
 </template>
 
 <script>
-import { Auth } from "aws-amplify";
+//import { Auth } from "aws-amplify";
 export default {
   name: "Login",
   data() {
@@ -103,19 +118,14 @@ export default {
       password: null, // show password
       email: null, // show email
       loading: false,
-      isError: null, // show error
+      error: null, // show error
       show: false, // show password
-      checking: false, // checking on log in
       passwordRules: [v => !!v || "Password is required"],
       emailRules: [
         v => !!v || "E-mail is required",
         v => /.+@.+\..+/.test(v) || "E-mail must be valid"
-      ],
+      ]
     };
-  },
-  // before destroy
-  beforeDestroy() {
-    clearInterval(this.interval);
   },
   // methods
   methods: {
@@ -128,8 +138,20 @@ export default {
 
       let username = this.email;
       let password = this.password;
+      console.log(username, password);
 
-      Auth.signIn(username, password);
+      // Cognito Authentication using Amplify
+      /**
+       * await Auth.signIn(username, password)
+        .then(() => {
+          this.$router.push("/"); // route on succesfull login
+        })
+        .catch(Error => {
+          if (Error) {
+            this.error = Error.message;
+          }
+        });
+      */
 
       setTimeout(() => {
         this.loading = false;
