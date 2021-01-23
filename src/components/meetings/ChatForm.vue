@@ -37,6 +37,7 @@ export default {
         data: `${this.item}`
       });
       sendnewmessage(event);
+      this.item = ""
     }
   }
 };

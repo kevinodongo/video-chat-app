@@ -44,7 +44,7 @@
                     block
                     large
                     elevation="3"
-                    @click="cancelMeeting"
+                    @click="cancelmeeting"
                     color="teal darken-1"
                     outlined
                     class="video_section_button cancel_button"
@@ -69,6 +69,7 @@
 </template>
 
 <script>
+//import { masteruser } from "../components/script";
 export default {
   name: "Videostart",
   data() {
@@ -83,6 +84,14 @@ export default {
       constraints: {
         audio: false,
         video: true
+      },
+      master: {
+        signalingClient: null,
+        localStream: null,
+        remoteStreams: []
+      },
+      event: {
+        connection_id: "123456"
       }
     };
   },
@@ -95,51 +104,22 @@ export default {
   methods: {
     // cancel meeting
     cancelmeeting() {
-      this.$router.push("/")
+      this.$router.push("/");
     },
     // join meeting
     joinmeeting() {
+      //masteruser();
       this.$router.push("/session")
     },
-    async initialize(e) {
+    async initialize() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(
+        let localView = document.querySelector("video");
+        this.master.localStream = await navigator.mediaDevices.getUserMedia(
           this.constraints
         );
-        this.handleSuccess(stream);
-        e.target.disabled = true;
-      } catch (e) {
-        this.handleError(e);
-      }
-    },
-    handleSuccess(stream) {
-      const video = document.querySelector("video");
-      const videoTracks = stream.getVideoTracks();
-      console.log("Got stream with constraints:", this.constraints);
-      console.log(`Using video device: ${videoTracks[0].label}`);
-      window.stream = stream; // make variable available to browser console
-      video.srcObject = stream;
-    },
-    handleError(error) {
-      if (error.name === "ConstraintNotSatisfiedError") {
-        const v = this.constraints.video;
-        this.errorMsg(
-          `The resolution ${v.width.exact}x${v.height.exact} px is not supported by your device.`
-        );
-      } else if (error.name === "PermissionDeniedError") {
-        this.errorMsg(
-          "Permissions have not been granted to use your camera and " +
-            "microphone, you need to allow the page access to your devices in " +
-            "order for the demo to work."
-        );
-      }
-      this.errorMsg(`getUserMedia error: ${error.name}`, error);
-    },
-    errorMsg(msg, error) {
-      const errorElement = document.querySelector("#errorMsg");
-      errorElement.innerHTML += `<p>${msg}</p>`;
-      if (typeof error !== "undefined") {
-        console.error(error);
+        localView.srcObject = this.master.localStream;
+      } catch (error) {
+        //
       }
     }
   }

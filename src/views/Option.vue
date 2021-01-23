@@ -74,7 +74,12 @@
 </template>
 
 <script>
-import { createnewmeeting, generateurl } from "../components/script";
+import {
+  createnewmeeting,
+  createsignal,
+  generateurl
+} from "../components/script";
+var randomize = require("randomatic");
 export default {
   name: "Option",
   data() {
@@ -105,27 +110,30 @@ export default {
         action: "create",
         data: `${response}` // meeting id
       });
-      await createnewmeeting(event);
+      createnewmeeting(event);
       // set timeout
       setTimeout(() => {
         this.loading = false;
-        this.$router.push("/chat")
+        this.$router.push("/chat");
       }, 1000);
     },
     // go to video
     async gotovideo() {
       this.loading = true;
-      const response = await generateurl("video");
-      let event = JSON.stringify({
-        action: "create",
-        data: `${response}` // meeting id
-      });
-      await createnewmeeting(event);
+      // 1. store user as master
+      let user = "MASTER";
+      this.$store.dispatch("savecurrentuser", user);
+      // 2a. Get the channel name
+      let channel_name = randomize("Aa0", 10);
+      await createsignal(channel_name);
+      // 2b. Save channel name
+      this.$store.dispatch("saveurl", channel_name);
       // set timeout
       setTimeout(() => {
         this.loading = false;
-        this.$router.push("/video")
+        this.$router.push("/video");
       }, 1000);
+      // end
     }
     // end
   }

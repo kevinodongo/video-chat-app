@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-amplify/ui-vue": "^0.2.33",
+    "amazon-kinesis-video-streams-webrtc": "^1.0.8",
     "aws-amplify": "^3.3.14",
     "aws-amplify-vue": "^2.1.4",
     "aws-sdk": "^2.828.0",

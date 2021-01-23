@@ -1,6 +1,6 @@
 // ==================================== (imports)
 const WebSocket = require("isomorphic-ws");
-const websocket_url = process.env.VUE_APP_WEBSOCKET_URL;
+const websocket_url = "wss://echo.websocket.org/";
 const ws = new WebSocket(`${websocket_url}`);
 // aws config file
 var AWS = require("aws-sdk");
@@ -9,7 +9,14 @@ AWS.config.update({
   secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY,
   accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID
 });
-// import short uuid
+const SignalingClient = require("amazon-kinesis-video-streams-webrtc")
+  .SignalingClient;
+// Create KVS client
+const kinesisVideoClient = new AWS.KinesisVideo({
+  region: process.env.VUE_APP_MY_REGION,
+  accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
+  secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY
+});
 //var randomize = require("randomatic");
 // impor store
 import store from "../store";
@@ -22,6 +29,16 @@ export const generateurl = event => {
   return event;
 };
 
+/**
+ * Action called
+ * ==================
+ * Open a connection
+ * Create a meeting
+ * Join a meeting
+ * Send a message
+ * ====================
+ */
+
 // on connect
 const onConnect = event => {
   if (event !== undefined) {
@@ -30,9 +47,9 @@ const onConnect = event => {
 };
 
 // on incoming
+let interval = 0;
 const inComing = () => {
   ws.onmessage = function incoming(data) {
-    console.log("INCOMING", data)
     let array = [];
     if (JSON.parse(data.data).source === "create") {
       array.push({
@@ -45,14 +62,24 @@ const inComing = () => {
       const response = JSON.parse(data.data).connected_users;
       let array = [];
       response.forEach(el => {
+        console.log(el);
         const value = Object.values(el.connectionId);
         array.push({
           name: value[0],
           createdAt: new Date()
         });
+        store.commit("saveurl", el.group_id);
       });
       store.commit("saveusers", array);
     }
+    if (data) {
+      interval = 5000; // set the timeout to 5000
+    }
+    // set timeout
+    // you will be disconnected after 10 min
+    setTimeout(() => {
+      pong();
+    }, interval);
   };
 };
 
@@ -60,43 +87,51 @@ const inComing = () => {
 const onClose = () => {
   ws.onclose = function close() {
     console.log("disconnected");
+    interval = 0;
+    clearTimeout(interval);
   };
-}
-
-/**
- * Action called
- * ==================
- * Open a connection
- * Create a meeting
- * Join a meeting
- * Send a message
- * ====================
- */
+};
 
 // create a meeting
+// eslint-disable-next-line no-unused-vars
+const pong = () => {
+  const msg = JSON.stringify({
+    action: "send",
+    data: "ping"
+  });
+  ws.send(msg);
+};
+
 export const createnewmeeting = event => {
+  /**
+   * Message format
+   * ===================
+   * const event = JSON.stringify({
+   *   action: "createMeeting"
+   *   data: "Room One" // incase you are only collecting room name
+   *   data: { "group_name": "": user_name: "": ""}
+   * })
+   */
   ws.onopen = onConnect(event);
   onClose();
   inComing();
+  ws.open();
 };
 
-// sample create @ connection
+// sample create meeting
 export const joinnewmeeting = event => {
   ws.onopen = onConnect(event);
   onClose();
   inComing();
+  ws.open();
 };
 
-// sample create @ connection
+// send message function
 export const sendnewmessage = event => {
   onConnect(event);
-  ws.onclose = function close() {
-    console.log("disconnected");
-  };
-
-  ws.onmessage = function incoming(data) {
-    console.log("INCOMING SEND MESSAGE", data);
-  };
+  onClose();
+  inComing();
+  ws.open();
 };
 
 /**
@@ -106,55 +141,37 @@ export const sendnewmessage = event => {
  * =====================================
  */
 
-/**
- * This file demonstrates the process of starting WebRTC streaming using a KVS Signaling Channel.
- */
-const master = {
-  signalingClient: null,
-  peerConnectionByClientId: {},
-  dataChannelByClientId: {},
-  localStream: null,
-  remoteStreams: [],
-  peerConnectionStatsInterval: null
+// Master function
+export const createsignal = async event => {
+  // 1. Create a signal channel
+  const createSignalingChannelResponse = await kinesisVideoClient
+    .createSignalingChannel({
+      ChannelName: `${event}` /* required */,
+      ChannelType: "SINGLE_MASTER"
+    })
+    .promise();
+  console.log("[MASTER] Channel Name: ", createSignalingChannelResponse);
+  return createSignalingChannelResponse;
 };
 
-export const startMaster = async (
-  localView,
-  remoteView,
-  formValues,
-  onStatsReport,
-  onRemoteDataMessage
-) => {
-  master.localView = localView;
-  master.remoteView = remoteView;
-
-  // Create KVS client
-  const kinesisVideoClient = new AWS.KinesisVideo({
-    region: formValues.region,
-    accessKeyId: formValues.accessKeyId,
-    secretAccessKey: formValues.secretAccessKey,
-    sessionToken: formValues.sessionToken,
-    endpoint: formValues.endpoint,
-    correctClockSkew: true
-  });
-
-  // Get signaling channel ARN
+// eslint-disable-next-line no-unused-vars
+export const generateiceserversformaster = async (event, master) => {
+  // 2. Get signaling channel ARN
   const describeSignalingChannelResponse = await kinesisVideoClient
     .describeSignalingChannel({
-      ChannelName: formValues.channelName
+      ChannelName: `${event}`
     })
     .promise();
   const channelARN = describeSignalingChannelResponse.ChannelInfo.ChannelARN;
   console.log("[MASTER] Channel ARN: ", channelARN);
 
-  // Get signaling channel endpoints
+  // 3. Get signaling channel endpoints
   const getSignalingChannelEndpointResponse = await kinesisVideoClient
     .getSignalingChannelEndpoint({
       ChannelARN: channelARN,
       SingleMasterChannelEndpointConfiguration: {
         Protocols: ["WSS", "HTTPS"],
-        // eslint-disable-next-line no-undef
-        Role: KVSWebRTC.Role.MASTER
+        Role: "MASTER"
       }
     })
     .promise();
@@ -167,18 +184,16 @@ export const startMaster = async (
   );
   console.log("[MASTER] Endpoints: ", endpointsByProtocol);
 
-  // Create Signaling Client
-  // eslint-disable-next-line no-undef
-  master.signalingClient = new KVSWebRTC.SignalingClient({
+  // 4. Create Signaling Client
+  //window.KVSWebRTC.SignalingClient
+  master.signalingClient = new SignalingClient({
     channelARN,
     channelEndpoint: endpointsByProtocol.WSS,
-    // eslint-disable-next-line no-undef
-    role: KVSWebRTC.Role.MASTER,
-    region: formValues.region,
+    role: "MASTER",
+    region: process.env.VUE_APP_MY_REGION,
     credentials: {
-      accessKeyId: formValues.accessKeyId,
-      secretAccessKey: formValues.secretAccessKey,
-      sessionToken: formValues.sessionToken
+      accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
+      secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY
     },
     systemClockOffset: kinesisVideoClient.config.systemClockOffset
   });
@@ -186,10 +201,9 @@ export const startMaster = async (
   // Get ICE server configuration
   const kinesisVideoSignalingChannelsClient = new AWS.KinesisVideoSignalingChannels(
     {
-      region: formValues.region,
-      accessKeyId: formValues.accessKeyId,
-      secretAccessKey: formValues.secretAccessKey,
-      sessionToken: formValues.sessionToken,
+      region: process.env.VUE_APP_MY_REGION,
+      accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
+      secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY,
       endpoint: endpointsByProtocol.HTTPS,
       correctClockSkew: true
     }
@@ -200,255 +214,27 @@ export const startMaster = async (
     })
     .promise();
   const iceServers = [];
-  if (!formValues.natTraversalDisabled && !formValues.forceTURN) {
+  // use either
+  iceServers.push({
+    urls: `stun:stun.kinesisvideo.${process.env.VUE_APP_MY_REGION}.amazonaws.com:443`
+  });
+  // OR
+  getIceServerConfigResponse.IceServerList.forEach(iceServer =>
     iceServers.push({
-      urls: `stun:stun.kinesisvideo.${formValues.region}.amazonaws.com:443`
-    });
-  }
-  if (!formValues.natTraversalDisabled) {
-    getIceServerConfigResponse.IceServerList.forEach(iceServer =>
-      iceServers.push({
-        urls: iceServer.Uris,
-        username: iceServer.Username,
-        credential: iceServer.Password
-      })
-    );
-  }
+      urls: iceServer.Uris,
+      username: iceServer.Username,
+      credential: iceServer.Password
+    })
+  );
   console.log("[MASTER] ICE servers: ", iceServers);
-
-  const configuration = {
-    iceServers,
-    iceTransportPolicy: formValues.forceTURN ? "relay" : "all"
-  };
-
-  const resolution = formValues.widescreen
-    ? { width: { ideal: 1280 }, height: { ideal: 720 } }
-    : { width: { ideal: 640 }, height: { ideal: 480 } };
-  const constraints = {
-    video: formValues.sendVideo ? resolution : false,
-    audio: formValues.sendAudio
-  };
-
-  // Get a stream from the webcam and display it in the local view.
-  // If no video/audio needed, no need to request for the sources.
-  // Otherwise, the browser will throw an error saying that either video or audio has to be enabled.
-  if (formValues.sendVideo || formValues.sendAudio) {
-    try {
-      master.localStream = await navigator.mediaDevices.getUserMedia(
-        constraints
-      );
-      localView.srcObject = master.localStream;
-    } catch (e) {
-      console.error("[MASTER] Could not find webcam");
-    }
-  }
-
-  master.signalingClient.on("open", async () => {
-    console.log("[MASTER] Connected to signaling service");
-  });
-
-  master.signalingClient.on("sdpOffer", async (offer, remoteClientId) => {
-    console.log("[MASTER] Received SDP offer from client: " + remoteClientId);
-
-    // Create a new peer connection using the offer from the given client
-    const peerConnection = new RTCPeerConnection(configuration);
-    master.peerConnectionByClientId[remoteClientId] = peerConnection;
-
-    if (formValues.openDataChannel) {
-      master.dataChannelByClientId[
-        remoteClientId
-      ] = peerConnection.createDataChannel("kvsDataChannel");
-      peerConnection.ondatachannel = event => {
-        event.channel.onmessage = onRemoteDataMessage;
-      };
-    }
-
-    // Poll for connection stats
-    if (!master.peerConnectionStatsInterval) {
-      master.peerConnectionStatsInterval = setInterval(
-        () => peerConnection.getStats().then(onStatsReport),
-        1000
-      );
-    }
-
-    // Send any ICE candidates to the other peer
-    peerConnection.addEventListener("icecandidate", ({ candidate }) => {
-      if (candidate) {
-        console.log(
-          "[MASTER] Generated ICE candidate for client: " + remoteClientId
-        );
-
-        // When trickle ICE is enabled, send the ICE candidates as they are generated.
-        if (formValues.useTrickleICE) {
-          console.log(
-            "[MASTER] Sending ICE candidate to client: " + remoteClientId
-          );
-          master.signalingClient.sendIceCandidate(candidate, remoteClientId);
-        }
-      } else {
-        console.log(
-          "[MASTER] All ICE candidates have been generated for client: " +
-            remoteClientId
-        );
-
-        // When trickle ICE is disabled, send the answer now that all the ICE candidates have ben generated.
-        if (!formValues.useTrickleICE) {
-          console.log(
-            "[MASTER] Sending SDP answer to client: " + remoteClientId
-          );
-          master.signalingClient.sendSdpAnswer(
-            peerConnection.localDescription,
-            remoteClientId
-          );
-        }
-      }
-    });
-
-    // As remote tracks are received, add them to the remote view
-    peerConnection.addEventListener("track", event => {
-      console.log(
-        "[MASTER] Received remote track from client: " + remoteClientId
-      );
-      if (remoteView.srcObject) {
-        return;
-      }
-      remoteView.srcObject = event.streams[0];
-    });
-
-    // If there's no video/audio, master.localStream will be null. So, we should skip adding the tracks from it.
-    if (master.localStream) {
-      master.localStream
-        .getTracks()
-        .forEach(track => peerConnection.addTrack(track, master.localStream));
-    }
-    await peerConnection.setRemoteDescription(offer);
-
-    // Create an SDP answer to send back to the client
-    console.log("[MASTER] Creating SDP answer for client: " + remoteClientId);
-    await peerConnection.setLocalDescription(
-      await peerConnection.createAnswer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-      })
-    );
-
-    // When trickle ICE is enabled, send the answer now and then send ICE candidates as they are generated. Otherwise wait on the ICE candidates.
-    if (formValues.useTrickleICE) {
-      console.log("[MASTER] Sending SDP answer to client: " + remoteClientId);
-      master.signalingClient.sendSdpAnswer(
-        peerConnection.localDescription,
-        remoteClientId
-      );
-    }
-    console.log(
-      "[MASTER] Generating ICE candidates for client: " + remoteClientId
-    );
-  });
-
-  master.signalingClient.on(
-    "iceCandidate",
-    async (candidate, remoteClientId) => {
-      console.log(
-        "[MASTER] Received ICE candidate from client: " + remoteClientId
-      );
-
-      // Add the ICE candidate received from the client to the peer connection
-      const peerConnection = master.peerConnectionByClientId[remoteClientId];
-      peerConnection.addIceCandidate(candidate);
-    }
-  );
-
-  master.signalingClient.on("close", () => {
-    console.log("[MASTER] Disconnected from signaling channel");
-  });
-
-  master.signalingClient.on("error", () => {
-    console.error("[MASTER] Signaling client error");
-  });
-
-  console.log("[MASTER] Starting master connection");
-  master.signalingClient.open();
+  return iceServers;
 };
 
-export const stopMaster = () => {
-  console.log("[MASTER] Stopping master connection");
-  if (master.signalingClient) {
-    master.signalingClient.close();
-    master.signalingClient = null;
-  }
-
-  Object.keys(master.peerConnectionByClientId).forEach(clientId => {
-    master.peerConnectionByClientId[clientId].close();
-  });
-  master.peerConnectionByClientId = [];
-
-  if (master.localStream) {
-    master.localStream.getTracks().forEach(track => track.stop());
-    master.localStream = null;
-  }
-
-  master.remoteStreams.forEach(remoteStream =>
-    remoteStream.getTracks().forEach(track => track.stop())
-  );
-  master.remoteStreams = [];
-
-  if (master.peerConnectionStatsInterval) {
-    clearInterval(master.peerConnectionStatsInterval);
-    master.peerConnectionStatsInterval = null;
-  }
-
-  if (master.localView) {
-    master.localView.srcObject = null;
-  }
-
-  if (master.remoteView) {
-    master.remoteView.srcObject = null;
-  }
-
-  if (master.dataChannelByClientId) {
-    master.dataChannelByClientId = {};
-  }
-};
-
-export const sendMasterMessage = message => {
-  Object.keys(master.dataChannelByClientId).forEach(clientId => {
-    try {
-      master.dataChannelByClientId[clientId].send(message);
-    } catch (e) {
-      console.error("[MASTER] Send DataChannel: ", e.toString());
-    }
-  });
-};
-
-/**
- * This file demonstrates the process of starting WebRTC streaming using a KVS Signaling Channel.
- */
-const viewer = {};
-
-export const startViewer = async (
-  localView,
-  remoteView,
-  formValues,
-  onStatsReport,
-  onRemoteDataMessage
-) => {
-  viewer.localView = localView;
-  viewer.remoteView = remoteView;
-
-  // Create KVS client
-  const kinesisVideoClient = new AWS.KinesisVideo({
-    region: formValues.region,
-    accessKeyId: formValues.accessKeyId,
-    secretAccessKey: formValues.secretAccessKey,
-    sessionToken: formValues.sessionToken,
-    endpoint: formValues.endpoint,
-    correctClockSkew: true
-  });
-
+export const generateiceserversforviewer = async (event, viewer) => {
   // Get signaling channel ARN
   const describeSignalingChannelResponse = await kinesisVideoClient
     .describeSignalingChannel({
-      ChannelName: formValues.channelName
+      ChannelName: event // channel name
     })
     .promise();
   const channelARN = describeSignalingChannelResponse.ChannelInfo.ChannelARN;
@@ -460,8 +246,7 @@ export const startViewer = async (
       ChannelARN: channelARN,
       SingleMasterChannelEndpointConfiguration: {
         Protocols: ["WSS", "HTTPS"],
-        // eslint-disable-next-line no-undef
-        Role: KVSWebRTC.Role.VIEWER
+        Role: "VIEWER"
       }
     })
     .promise();
@@ -476,10 +261,9 @@ export const startViewer = async (
 
   const kinesisVideoSignalingChannelsClient = new AWS.KinesisVideoSignalingChannels(
     {
-      region: formValues.region,
-      accessKeyId: formValues.accessKeyId,
-      secretAccessKey: formValues.secretAccessKey,
-      sessionToken: formValues.sessionToken,
+      region: process.env.VUE_APP_MY_REGION,
+      accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
+      secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY,
       endpoint: endpointsByProtocol.HTTPS,
       correctClockSkew: true
     }
@@ -492,166 +276,37 @@ export const startViewer = async (
     })
     .promise();
   const iceServers = [];
-  if (!formValues.natTraversalDisabled && !formValues.forceTURN) {
+  iceServers.push({
+    urls: `stun:stun.kinesisvideo.${process.env.VUE_APP_MY_REGION}.amazonaws.com:443`
+  });
+  getIceServerConfigResponse.IceServerList.forEach(iceServer =>
     iceServers.push({
-      urls: `stun:stun.kinesisvideo.${formValues.region}.amazonaws.com:443`
-    });
-  }
-  if (!formValues.natTraversalDisabled) {
-    getIceServerConfigResponse.IceServerList.forEach(iceServer =>
-      iceServers.push({
-        urls: iceServer.Uris,
-        username: iceServer.Username,
-        credential: iceServer.Password
-      })
-    );
-  }
+      urls: iceServer.Uris,
+      username: iceServer.Username,
+      credential: iceServer.Password
+    })
+  );
   console.log("[VIEWER] ICE servers: ", iceServers);
 
   // Create Signaling Client
-  // eslint-disable-next-line no-undef
-  viewer.signalingClient = new KVSWebRTC.SignalingClient({
+  viewer.signalingClient = new SignalingClient({
     channelARN,
     channelEndpoint: endpointsByProtocol.WSS,
-    clientId: formValues.clientId,
-    // eslint-disable-next-line no-undef
-    role: KVSWebRTC.Role.VIEWER,
-    region: formValues.region,
+    clientId: viewer.connection_id,
+    role: "VIEWER",
+    region: process.env.VUE_APP_MY_REGION,
     credentials: {
-      accessKeyId: formValues.accessKeyId,
-      secretAccessKey: formValues.secretAccessKey,
-      sessionToken: formValues.sessionToken
+      region: process.env.VUE_APP_MY_REGION,
+      accessKeyId: process.env.VUE_APP_ACCESS_KEY_ID,
+      secretAccessKey: process.env.VUE_APP_SECRET_ACCESS_KEY
     },
     systemClockOffset: kinesisVideoClient.config.systemClockOffset
   });
-
-  const resolution = formValues.widescreen
-    ? { width: { ideal: 1280 }, height: { ideal: 720 } }
-    : { width: { ideal: 640 }, height: { ideal: 480 } };
-  const constraints = {
-    video: formValues.sendVideo ? resolution : false,
-    audio: formValues.sendAudio
-  };
-  const configuration = {
-    iceServers,
-    iceTransportPolicy: formValues.forceTURN ? "relay" : "all"
-  };
-  viewer.peerConnection = new RTCPeerConnection(configuration);
-  if (formValues.openDataChannel) {
-    viewer.dataChannel = viewer.peerConnection.createDataChannel(
-      "kvsDataChannel"
-    );
-    viewer.peerConnection.ondatachannel = event => {
-      event.channel.onmessage = onRemoteDataMessage;
-    };
-  }
-
-  // Poll for connection stats
-  viewer.peerConnectionStatsInterval = setInterval(
-    () => viewer.peerConnection.getStats().then(onStatsReport),
-    1000
-  );
-
-  viewer.signalingClient.on("open", async () => {
-    console.log("[VIEWER] Connected to signaling service");
-
-    // Get a stream from the webcam, add it to the peer connection, and display it in the local view.
-    // If no video/audio needed, no need to request for the sources.
-    // Otherwise, the browser will throw an error saying that either video or audio has to be enabled.
-    if (formValues.sendVideo || formValues.sendAudio) {
-      try {
-        viewer.localStream = await navigator.mediaDevices.getUserMedia(
-          constraints
-        );
-        viewer.localStream
-          .getTracks()
-          .forEach(track =>
-            viewer.peerConnection.addTrack(track, viewer.localStream)
-          );
-        localView.srcObject = viewer.localStream;
-      } catch (e) {
-        console.error("[VIEWER] Could not find webcam");
-        return;
-      }
-    }
-
-    // Create an SDP offer to send to the master
-    console.log("[VIEWER] Creating SDP offer");
-    await viewer.peerConnection.setLocalDescription(
-      await viewer.peerConnection.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-      })
-    );
-
-    // When trickle ICE is enabled, send the offer now and then send ICE candidates as they are generated. Otherwise wait on the ICE candidates.
-    if (formValues.useTrickleICE) {
-      console.log("[VIEWER] Sending SDP offer");
-      viewer.signalingClient.sendSdpOffer(
-        viewer.peerConnection.localDescription
-      );
-    }
-    console.log("[VIEWER] Generating ICE candidates");
-  });
-
-  viewer.signalingClient.on("sdpAnswer", async answer => {
-    // Add the SDP answer to the peer connection
-    console.log("[VIEWER] Received SDP answer");
-    await viewer.peerConnection.setRemoteDescription(answer);
-  });
-
-  viewer.signalingClient.on("iceCandidate", candidate => {
-    // Add the ICE candidate received from the MASTER to the peer connection
-    console.log("[VIEWER] Received ICE candidate");
-    viewer.peerConnection.addIceCandidate(candidate);
-  });
-
-  viewer.signalingClient.on("close", () => {
-    console.log("[VIEWER] Disconnected from signaling channel");
-  });
-
-  viewer.signalingClient.on("error", error => {
-    console.error("[VIEWER] Signaling client error: ", error);
-  });
-
-  // Send any ICE candidates to the other peer
-  viewer.peerConnection.addEventListener("icecandidate", ({ candidate }) => {
-    if (candidate) {
-      console.log("[VIEWER] Generated ICE candidate");
-
-      // When trickle ICE is enabled, send the ICE candidates as they are generated.
-      if (formValues.useTrickleICE) {
-        console.log("[VIEWER] Sending ICE candidate");
-        viewer.signalingClient.sendIceCandidate(candidate);
-      }
-    } else {
-      console.log("[VIEWER] All ICE candidates have been generated");
-
-      // When trickle ICE is disabled, send the offer now that all the ICE candidates have ben generated.
-      if (!formValues.useTrickleICE) {
-        console.log("[VIEWER] Sending SDP offer");
-        viewer.signalingClient.sendSdpOffer(
-          viewer.peerConnection.localDescription
-        );
-      }
-    }
-  });
-
-  // As remote tracks are received, add them to the remote view
-  viewer.peerConnection.addEventListener("track", event => {
-    console.log("[VIEWER] Received remote track");
-    if (remoteView.srcObject) {
-      return;
-    }
-    viewer.remoteStream = event.streams[0];
-    remoteView.srcObject = viewer.remoteStream;
-  });
-
-  console.log("[VIEWER] Starting viewer connection");
-  viewer.signalingClient.open();
+  return iceServers;
 };
 
-export const stopViewer = () => {
+// stop viewer
+export const stopviewer = viewer => {
   console.log("[VIEWER] Stopping viewer connection");
   if (viewer.signalingClient) {
     viewer.signalingClient.close();
@@ -673,11 +328,6 @@ export const stopViewer = () => {
     viewer.remoteStream = null;
   }
 
-  if (viewer.peerConnectionStatsInterval) {
-    clearInterval(viewer.peerConnectionStatsInterval);
-    viewer.peerConnectionStatsInterval = null;
-  }
-
   if (viewer.localView) {
     viewer.localView.srcObject = null;
   }
@@ -685,18 +335,54 @@ export const stopViewer = () => {
   if (viewer.remoteView) {
     viewer.remoteView.srcObject = null;
   }
+};
 
-  if (viewer.dataChannel) {
-    viewer.dataChannel = null;
+// stop master
+export const stopmaster = master => {
+  console.log("[VIEWER] Stopping viewer connection");
+  if (master.signalingClient) {
+    master.signalingClient.close();
+    master.signalingClient = null;
+  }
+
+  if (master.peerConnection) {
+    master.peerConnection.close();
+    master.peerConnection = null;
+  }
+
+  if (master.localStream) {
+    master.localStream.getTracks().forEach(track => track.stop());
+    master.localStream = null;
+  }
+
+  if (master.remoteStream) {
+    master.remoteStream.getTracks().forEach(track => track.stop());
+    master.remoteStream = null;
+  }
+
+  if (master.localView) {
+    master.localView.srcObject = null;
+  }
+
+  if (master.remoteView) {
+    master.remoteView.srcObject = null;
   }
 };
 
-export const sendViewerMessage = message => {
-  if (viewer.dataChannel) {
-    try {
-      viewer.dataChannel.send(message);
-    } catch (e) {
-      console.error("[VIEWER] Send DataChannel: ", e.toString());
-    }
-  }
+// delete channel
+export const deletechannel = async event => {
+  // 2. Get signaling channel ARN
+  const describeSignalingChannelResponse = await kinesisVideoClient
+    .describeSignalingChannel({
+      ChannelName: `${event}`
+    })
+    .promise();
+  const channelARN = describeSignalingChannelResponse.ChannelInfo.ChannelARN;
+  console.log("[MASTER] Channel ARN: ", channelARN);
+  // delete channel
+  await kinesisVideoClient
+    .deleteSignalingChannel({
+      ChannelARN: `${channelARN}`
+    })
+    .promise();
 };

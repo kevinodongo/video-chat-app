@@ -184,15 +184,21 @@ export default {
     // join meeting
     async joinmeeting() {
       const response = this.item.split(",");
-      let event = JSON.stringify({
-        action: "join",
-        data: { group_name: `${response[1]}`, group_id: `${response[0]}` }
-      });
-      await joinnewmeeting(event);
-      if (response[1] === "chat") {
+      // if response[1] is chat the create a chat session
+      if (response[1].toLowerCase() === "chat") {
+        let event = JSON.stringify({
+          action: "join",
+          data: { group_name: `${response[1]}`, group_id: `${response[0]}` }
+        });
+        // join meeting
+        joinnewmeeting(event);
         this.$router.push("/chat");
       } else {
-        this.$router.push("/video");
+        // 1. store user as VIEWER
+        let user = "VIEWER";
+        this.$store.dispatch("savecurrentuser", user); // current user
+        this.$store.dispatch("saveurl", this.item); // meeting url
+        this.$router.push("/video"); // route to video
       }
     }
   }
